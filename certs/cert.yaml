@@ -12,7 +12,7 @@ metadata:
   name: selfsigned-cert
   namespace: default
 spec:
-  secretName: sidecar-injector-certs
+  secretName: huawei-lb-annotator-certs
   dnsNames:
     - huawei-lb-annotator.default.svc
     - huawei-lb-annotator.default.svc.cluster.local

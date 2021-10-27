@@ -1,6 +1,7 @@
 package main
 
 import (
+	// "crypto/sha256"
 	"crypto/sha256"
 	"flag"
 	"io/ioutil"
@@ -10,6 +11,8 @@ import (
 	"github.com/golang/glog"
 	hook "github.com/mixitgit/huawei-lb-webhook/webhook"
 	"gopkg.in/yaml.v2"
+
+	// "gopkg.in/yaml.v2"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -19,12 +22,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-var log = logf.Log.WithName("example-controller")
+var log = logf.Log.WithName("huawei-lb-webhook")
 
 type HookParamters struct {
-	certDir       string
-	sidecarConfig string
-	port          int
+	certDir  string
+	lbConfig string
+	port     int
 }
 
 func visit(files *[]string) filepath.WalkFunc {
@@ -37,30 +40,31 @@ func visit(files *[]string) filepath.WalkFunc {
 	}
 }
 
-// func loadConfig(configFile string) (*hook.Config, error) {
-// 	data, err := ioutil.ReadFile(configFile)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	glog.Infof("New configuration: sha256sum %x", sha256.Sum256(data))
+func loadConfig(configFile string) (*hook.LoadBalancerConfig, error) {
+	data, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return nil, err
+	}
 
-// 	var cfg hook.Config
-// 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-// 		return nil, err
-// 	}
+	glog.Infof("New configuration: sha256sum %x", sha256.Sum256(data))
 
-// 	return &cfg, nil
-// }
+	var cfg hook.LoadBalancerConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
 
 func main() {
 	var params HookParamters
 
 	flag.IntVar(&params.port, "port", 8443, "Wehbook port")
 	flag.StringVar(&params.certDir, "certDir", "/certs/", "Wehbook certificate folder")
-	// flag.StringVar(&params.sidecarConfig, "sidecarConfig", "/etc/webhook/config/sidecarconfig.yaml", "Wehbook sidecar config")
+	flag.StringVar(&params.lbConfig, "lbConfig", "/etc/webhook/config/config.yaml", "Wehbook lb config")
 	flag.Parse()
 
-	logf.SetLogger(zap.New(false))
+	logf.SetLogger(zap.New())
 	entryLog := log.WithName("entrypoint")
 
 	// Setup a Manager
@@ -71,7 +75,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// config, err := loadConfig(params.sidecarConfig)
+	lbConfig, err := loadConfig(params.lbConfig)
+	if err != nil {
+		entryLog.Error(err, "failed to read loadbalancer config")
+		os.Exit(1)
+	}
 
 	// Setup webhooks
 	entryLog.Info("setting up webhook server")
@@ -81,7 +89,7 @@ func main() {
 	hookServer.CertDir = params.certDir
 
 	entryLog.Info("registering webhooks to the webhook server")
-	hookServer.Register("/mutate", &webhook.Admission{Handler: &hook.LoadBalancerAnnotator{Name: "Huawei", Client: mgr.GetClient()}})
+	hookServer.Register("/mutate", &webhook.Admission{Handler: &hook.LoadBalancerAnnotator{Name: "Huawei", Client: mgr.GetClient(), LBConfig: lbConfig}})
 
 	entryLog.Info("starting manager")
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
