@@ -40,26 +40,24 @@ func (lba *LoadBalancerAnnotator) annotateLoadBalancer(svc *corev1.Service) erro
 	if _, e := svc.Annotations["kubernetes.io/elb.class"]; e {
 		return fmt.Errorf("Annotation elb.class exists")
 	}
-	svc.Annotations["kubernetes.io/elb.class"] = "union"
-
 	if _, e := svc.Annotations["kubernetes.io/session-affinity-mode"]; e {
 		return fmt.Errorf("Annotation kubernetes.io/session-affinity-mode exists")
 	}
-	svc.Annotations["kubernetes.io/session-affinity-mode"] = "SOURCE_IP"
-
 	if _, e := svc.Annotations["kubernetes.io/elb.subnet-id"]; e {
 		return fmt.Errorf("Annotation kubernetes.io/elb.subnet-id exists")
 	}
-	svc.Annotations["kubernetes.io/elb.subnet-id"] = lba.LBConfig.SubnetID
-
 	if _, e := svc.Annotations["kubernetes.io/elb.enterpriseID"]; e {
 		return fmt.Errorf("Annotation kubernetes.io/elb.enterpriseID exists")
 	}
-	svc.Annotations["kubernetes.io/elb.enterpriseID"] = lba.LBConfig.EnterpriseID
-
 	if _, e := svc.Annotations["kubernetes.io/elb.autocreate"]; e {
 		return fmt.Errorf("Annotation kubernetes.io/autocreate exists")
 	}
+
+	svc.Annotations["kubernetes.io/elb.class"] = "union"
+	svc.Annotations["kubernetes.io/session-affinity-mode"] = "SOURCE_IP"
+	svc.Annotations["kubernetes.io/elb.subnet-id"] = lba.LBConfig.SubnetID
+	svc.Annotations["kubernetes.io/elb.enterpriseID"] = lba.LBConfig.EnterpriseID
+
 	lba.LBConfig.Name = fmt.Sprintf("%s-%s", lba.LBConfig.NamePrefix, svc.ObjectMeta.Name)
 	marshalledAutocreate, err := json.Marshal(lba.LBConfig.Autocreate)
 	if err != nil {
