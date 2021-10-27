@@ -1,4 +1,4 @@
-module github.com/mixitgit/hauwei-lb-webhook
+module github.com/mixitgit/huawei-lb-webhook
 
 go 1.15
 
