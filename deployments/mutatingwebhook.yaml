@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: huawei-lb-annotator
+  labels:
+    app: huawei-lb-annotator
+spec:
+  ports:
+  - port: 8443
+    targetPort: 8443
+  selector:
+    app: huawei-lb-annotator
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: huawei-lb-annotator-config
+  annotations:
+    cert-manager.io/inject-ca-from: default/selfsigned-cert
+webhooks:
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: huawei-lb-annotator 
+      path: /mutate
+      port: 8443
+      namespace: default
+  sideEffects: None
+  admissionReviewVersions: ["v1beta1"]
+  failurePolicy: Fail
+  name: mpod.kb.io
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - service
+    scope: "Namespaced"

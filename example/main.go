@@ -1,4 +1,4 @@
-package main
+package example
 
 import (
 	"crypto/sha256"
@@ -37,30 +37,30 @@ func visit(files *[]string) filepath.WalkFunc {
 	}
 }
 
-// func loadConfig(configFile string) (*hook.Config, error) {
-// 	data, err := ioutil.ReadFile(configFile)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	glog.Infof("New configuration: sha256sum %x", sha256.Sum256(data))
+func loadConfig(configFile string) (*hook.Config, error) {
+	data, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return nil, err
+	}
+	glog.Infof("New configuration: sha256sum %x", sha256.Sum256(data))
 
-// 	var cfg hook.Config
-// 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-// 		return nil, err
-// 	}
+	var cfg hook.Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
 
-// 	return &cfg, nil
-// }
+	return &cfg, nil
+}
 
 func main() {
 	var params HookParamters
 
 	flag.IntVar(&params.port, "port", 8443, "Wehbook port")
 	flag.StringVar(&params.certDir, "certDir", "/certs/", "Wehbook certificate folder")
-	// flag.StringVar(&params.sidecarConfig, "sidecarConfig", "/etc/webhook/config/sidecarconfig.yaml", "Wehbook sidecar config")
+	flag.StringVar(&params.sidecarConfig, "sidecarConfig", "/etc/webhook/config/sidecarconfig.yaml", "Wehbook sidecar config")
 	flag.Parse()
 
-	logf.SetLogger(zap.New(false))
+	logf.SetLogger(zap.Logger(false))
 	entryLog := log.WithName("entrypoint")
 
 	// Setup a Manager
@@ -71,7 +71,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// config, err := loadConfig(params.sidecarConfig)
+	config, err := loadConfig(params.sidecarConfig)
 
 	// Setup webhooks
 	entryLog.Info("setting up webhook server")
@@ -81,7 +81,7 @@ func main() {
 	hookServer.CertDir = params.certDir
 
 	entryLog.Info("registering webhooks to the webhook server")
-	hookServer.Register("/mutate", &webhook.Admission{Handler: &hook.LoadBalancerAnnotator{Name: "Huawei", Client: mgr.GetClient()}})
+	hookServer.Register("/mutate", &webhook.Admission{Handler: &hook.SidecarInjector{Name: "Logger", Client: mgr.GetClient(), SidecarConfig: config}})
 
 	entryLog.Info("starting manager")
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {

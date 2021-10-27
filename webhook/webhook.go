@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/prometheus/common/log"
 	corev1 "k8s.io/api/core/v1"
@@ -12,83 +11,50 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +kubebuilder:webhook:path=/mutate,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
-
-// SidecarInjector annotates Pods
-type SidecarInjector struct {
-	Name          string
-	Client        client.Client
-	decoder       *admission.Decoder
-	SidecarConfig *Config
+type LoadBalancerAnnotator struct {
+	Name               string
+	Client             client.Client
+	decoder            *admission.Decoder
 }
 
-type Config struct {
-	Containers []corev1.Container `yaml:"containers"`
-}
+func (lba *LoadBalancerAnnotator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	service := &corev1.Service{}
 
-func shoudInject(pod *corev1.Pod) bool {
-	shouldInjectSidecar, err := strconv.ParseBool(pod.Annotations["inject-logging-sidecar"])
-
+	err := lba.decoder.Decode(req, service)
 	if err != nil {
-		shouldInjectSidecar = false
-	}
-
-	if shouldInjectSidecar {
-		alreadyUpdated, err := strconv.ParseBool(pod.Annotations["logging-sidecar-added"])
-
-		if err == nil && alreadyUpdated {
-			shouldInjectSidecar = false
-		}
-	}
-
-	log.Info("Should Inject: ", shouldInjectSidecar)
-
-	return shouldInjectSidecar
-}
-
-// SidecarInjector adds an annotation to every incoming pods.
-func (si *SidecarInjector) Handle(ctx context.Context, req admission.Request) admission.Response {
-	pod := &corev1.Pod{}
-
-	err := si.decoder.Decode(req, pod)
-	if err != nil {
-		log.Info("Sdecar-Injector: cannot decode")
+		log.Info("LBAnnotator: cannot decode")
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if pod.Annotations == nil {
-		pod.Annotations = map[string]string{}
+	var shouldAnnotate bool
+	if service.Spec.Type == corev1.ServiceTypeLoadBalancer {
+		shouldAnnotate = true
 	}
 
-	shoudInjectSidecar := shoudInject(pod)
+	log.Info("Should Annotate: ", shouldAnnotate, service.Spec.Type)
 
-	if shoudInjectSidecar {
-		log.Info("Injecting sidecar...")
+	if shouldAnnotate {
+		log.Info("Annotating service...")
 
-		pod.Spec.Containers = append(pod.Spec.Containers, si.SidecarConfig.Containers...)
+		service.Annotations["test"] = "true"
 
-		pod.Annotations["logging-sidecar-added"] = "true"
-
-		log.Info("Sidecar ", si.Name, " injected.")
+		log.Info("Service annoted")
 	} else {
-		log.Info("Inject not needed.")
+		log.Info("Annotation not needed")
 	}
 
-	marshaledPod, err := json.Marshal(pod)
+	marshalledService, err := json.Marshal(service)
 
 	if err != nil {
-		log.Info("Sdecar-Injector: cannot marshal")
+		log.Info("LBAnnotator: cannot marshal")
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
+	return admission.PatchResponseFromRaw(req.Object.Raw, marshalledService)
 }
 
-// SidecarInjector implements admission.DecoderInjector.
-// A decoder will be automatically inj1ected.
-
 // InjectDecoder injects the decoder.
-func (si *SidecarInjector) InjectDecoder(d *admission.Decoder) error {
-	si.decoder = d
+func (lba *LoadBalancerAnnotator) InjectDecoder(d *admission.Decoder) error {
+	lba.decoder = d
 	return nil
 }
