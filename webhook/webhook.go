@@ -28,7 +28,7 @@ type LoadBalancerConfig struct {
 
 type Autocreate struct {
 	LBType              string `yaml:"type" json:"type"`
-	BandwidthName       string `yaml:"bandwidthName,omitempty" json:"bandwidth_name,omitempty"`
+	BandwidthName       string `yaml:",omitempty" json:"bandwidth_name,omitempty"`
 	BandwidthChargemode string `yaml:"bandwidthChargemode,omitempty" json:"bandwidth_chargemode,omitempty"`
 	BandwidthSize       int `yaml:"bandwidthSize,omitempty" json:"bandwidth_size,omitempty"`
 	BandwidthSharetype  string `yaml:"bandwidthSharetype,omitempty" json:"bandwidth_sharetype,omitempty"`
@@ -58,7 +58,8 @@ func (lba *LoadBalancerAnnotator) annotateLoadBalancer(svc *corev1.Service) erro
 	svc.Annotations["kubernetes.io/elb.subnet-id"] = lba.LBConfig.SubnetID
 	svc.Annotations["kubernetes.io/elb.enterpriseID"] = lba.LBConfig.EnterpriseID
 
-	lba.LBConfig.Name = fmt.Sprintf("%s-%s", lba.LBConfig.NamePrefix, svc.ObjectMeta.Name)
+	lba.LBConfig.Name = fmt.Sprintf("lb-%s-%s-%s", lba.LBConfig.NamePrefix, svc.ObjectMeta.Name, svc.ObjectMeta.Namespace)
+	lba.LBConfig.BandwidthName = fmt.Sprintf("bw-%s-%s-%s", lba.LBConfig.NamePrefix, svc.ObjectMeta.Name, svc.ObjectMeta.Namespace)
 	marshalledAutocreate, err := json.Marshal(lba.LBConfig.Autocreate)
 	if err != nil {
 		log.Info("LBAnnotator: cannot marshal")

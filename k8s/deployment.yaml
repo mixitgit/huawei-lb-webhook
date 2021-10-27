@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: huawei-lb-annotator
-          image: mixitd/huawei-lb-wh:0.2.11
+          image: mixitd/huawei-lb-wh:0.2.12
           imagePullPolicy: Always
           args:
             - -certDir=/etc/webhook/certs

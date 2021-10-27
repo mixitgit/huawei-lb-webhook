@@ -10,7 +10,7 @@ data:
     namePrefix: wh-test
     autocreate:
       type: public
-      bandwidthName: test-auto-001
+      #bandwidthName: test-auto-001
       bandwidthSize: 5
       bandwidthChargemode: traffic
       bandwidthSharetype: PER
