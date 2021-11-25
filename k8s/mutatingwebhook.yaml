@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: huawei-lb-annotator
+  namespace: kaas
   labels:
     app: huawei-lb-annotator
 spec:
@@ -24,7 +25,7 @@ webhooks:
       name: huawei-lb-annotator 
       path: /mutate
       port: 8443
-      namespace: default
+      namespace: kaas
   sideEffects: None
   admissionReviewVersions: ["v1beta1"]
   failurePolicy: Fail

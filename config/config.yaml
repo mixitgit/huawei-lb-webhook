@@ -2,12 +2,12 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: huawei-lb-annotator-config
-  namespace: default
+  namespace: kaas
 data:
   config.yaml: | 
     subnetID: 5083f225-9bf8-48fa-9c8b-67bd9693c4c0
     enterpriseID: a104a57b-7345-4d3d-8289-48b8831ffb47
-    namePrefix: wh-test
+    namePrefix: mwh
     autocreate:
       type: public
       #bandwidthName: test-auto-001
