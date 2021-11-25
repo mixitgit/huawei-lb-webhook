@@ -14,7 +14,7 @@ metadata:
 spec:
   secretName: huawei-lb-annotator-certs
   dnsNames:
-    - huawei-lb-annotator.default.svc
-    - huawei-lb-annotator.default.svc.cluster.local
+    - huawei-lb-annotator.kaas.svc
+    - huawei-lb-annotator.kaas.svc.cluster.local
   issuerRef:
     name: selfsigned-issuer

@@ -17,7 +17,7 @@ kind: MutatingWebhookConfiguration
 metadata:
   name: huawei-lb-annotator-webhook
   annotations:
-    cert-manager.io/inject-ca-from: default/selfsigned-cert
+    cert-manager.io/inject-ca-from: kaas/selfsigned-cert
 webhooks:
 - clientConfig:
     caBundle: Cg==
