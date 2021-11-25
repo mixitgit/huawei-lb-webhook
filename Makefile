@@ -1,5 +1,5 @@
 IMG=mixitd/huawei-lb-wh
-TAG=0.2.12
+TAG=0.3.0
 
 all: release deploy
 

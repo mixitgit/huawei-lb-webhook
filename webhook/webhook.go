@@ -2,6 +2,8 @@ package hook
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -30,27 +32,32 @@ type Autocreate struct {
 	LBType              string `yaml:"type" json:"type"`
 	BandwidthName       string `yaml:",omitempty" json:"bandwidth_name,omitempty"`
 	BandwidthChargemode string `yaml:"bandwidthChargemode,omitempty" json:"bandwidth_chargemode,omitempty"`
-	BandwidthSize       int `yaml:"bandwidthSize,omitempty" json:"bandwidth_size,omitempty"`
+	BandwidthSize       int    `yaml:"bandwidthSize,omitempty" json:"bandwidth_size,omitempty"`
 	BandwidthSharetype  string `yaml:"bandwidthSharetype,omitempty" json:"bandwidth_sharetype,omitempty"`
 	EipType             string `yaml:"eipType,omitempty" json:"eip_type,omitempty"`
 	Name                string `yaml:",omitempty" json:"name,omitempty"`
 }
 
+func GetMD5Hash(text string) string {
+	hash := md5.Sum([]byte(text))
+	return hex.EncodeToString(hash[:])
+}
+
 func (lba *LoadBalancerAnnotator) annotateLoadBalancer(svc *corev1.Service) error {
 	if _, e := svc.Annotations["kubernetes.io/elb.class"]; e {
-		return fmt.Errorf("Annotation elb.class exists")
+		return fmt.Errorf("annotation elb.class exists")
 	}
 	if _, e := svc.Annotations["kubernetes.io/session-affinity-mode"]; e {
-		return fmt.Errorf("Annotation kubernetes.io/session-affinity-mode exists")
+		return fmt.Errorf("annotation kubernetes.io/session-affinity-mode exists")
 	}
 	if _, e := svc.Annotations["kubernetes.io/elb.subnet-id"]; e {
-		return fmt.Errorf("Annotation kubernetes.io/elb.subnet-id exists")
+		return fmt.Errorf("annotation kubernetes.io/elb.subnet-id exists")
 	}
 	if _, e := svc.Annotations["kubernetes.io/elb.enterpriseID"]; e {
-		return fmt.Errorf("Annotation kubernetes.io/elb.enterpriseID exists")
+		return fmt.Errorf("annotation kubernetes.io/elb.enterpriseID exists")
 	}
 	if _, e := svc.Annotations["kubernetes.io/elb.autocreate"]; e {
-		return fmt.Errorf("Annotation kubernetes.io/autocreate exists")
+		return fmt.Errorf("annotation kubernetes.io/autocreate exists")
 	}
 
 	svc.Annotations["kubernetes.io/elb.class"] = "union"
@@ -58,12 +65,17 @@ func (lba *LoadBalancerAnnotator) annotateLoadBalancer(svc *corev1.Service) erro
 	svc.Annotations["kubernetes.io/elb.subnet-id"] = lba.LBConfig.SubnetID
 	svc.Annotations["kubernetes.io/elb.enterpriseID"] = lba.LBConfig.EnterpriseID
 
-	lba.LBConfig.Name = fmt.Sprintf("lb-%s-%s-%s", lba.LBConfig.NamePrefix, svc.ObjectMeta.Name, svc.ObjectMeta.Namespace)
-	lba.LBConfig.BandwidthName = fmt.Sprintf("bw-%s-%s-%s", lba.LBConfig.NamePrefix, svc.ObjectMeta.Name, svc.ObjectMeta.Namespace)
+	nname := fmt.Sprintf("%s-%s", svc.ObjectMeta.Name, svc.ObjectMeta.Namespace)
+	if len(nname) > 16 {
+		nname = GetMD5Hash(nname)
+	}
+
+	lba.LBConfig.Name = fmt.Sprintf("lb-%s-%s", lba.LBConfig.NamePrefix, nname)
+	lba.LBConfig.BandwidthName = fmt.Sprintf("bw-%s-%s", lba.LBConfig.NamePrefix, nname)
 	marshalledAutocreate, err := json.Marshal(lba.LBConfig.Autocreate)
 	if err != nil {
 		log.Info("LBAnnotator: cannot marshal")
-		return fmt.Errorf("Failed to marshal autocreate,", err)
+		return fmt.Errorf("failed to marshal autocreate, %v", err)
 	}
 	log.Info("Generated autocreate:", string(marshalledAutocreate))
 	svc.Annotations["kubernetes.io/elb.autocreate"] = string(marshalledAutocreate)
